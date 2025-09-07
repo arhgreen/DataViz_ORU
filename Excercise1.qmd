@@ -1,0 +1,135 @@
+---
+title: "Excercise 1"
+author: "Aaron Green"
+format: pdf
+editor: visual
+---
+
+```{r heart}
+
+## Loading necessary packages
+library(ggplot2) # For Data visualisation
+library(tidyverse) # For data Manipulation 
+
+# Fetching the Heart disease data from the given link 
+link <- "https://www.statlearning.com/s/Heart.csv"
+heart_disease <- read.csv(link)
+
+# Exploring the data
+head(heart_disease)
+
+
+#######################################################################
+# DATA MANIPULATION & TRANSFROMATION 
+#######################################################################
+
+# Removing the first column in the dataset as it is just row numbers
+heart_disease <- heart_disease[, -1]
+
+# Converting variable names to lowercase to simplify data handling
+names(heart_disease) <- tolower(names(heart_disease))
+
+# explicitly define the variables chestpain, thal and ahd to match the specified levels 
+
+heart_disease <- heart_disease %>% 
+  mutate(chestpain = recode(chestpain, 
+                            "asymptomatic" = 0, 
+                            "nontypical" = 1, 
+                            "nonanginal" = 2, 
+                            "typical" = 3),
+         thal = recode(thal, 
+                       "fixed" = 1, 
+                       "normal" = 2, 
+                       "reversable" = 3),
+         ahd = recode(ahd,
+                      "No" = 1,
+                      "Yes" = 0))
+ 
+# renaming ahd to target for better understanding
+heart_disease <- heart_disease %>% 
+  rename(target = ahd)
+
+# FACTORING VARIABLES ACCORDINGLY
+#NB: slope has been coded with 1, 2, 3 to match content in the dataset 
+heart_disease <- heart_disease %>% 
+  mutate(sex = factor(sex,
+                      levels = c(0, 1),
+                      labels = c("female", "male")),
+         chestpain = factor(chestpain,
+                            levels = c(0, 1, 2, 3),
+                            labels = c("asymptomatic", "nontypical",
+                                       "nonanginal", "typical")),
+         fbs = factor(fbs, 
+                      levels = c(0, 1),
+                      labels = c("false", "true")),
+         restecg = factor(restecg,
+                          levels = c(0, 1, 2),
+                          labels = c("showing probable or definite left ventricular hypertrophy by Estes’ criteria",
+                                     "normal",
+                                     "having ST-T wave abnormality")),
+         exang = factor(exang,
+                        levels = c(0, 1),
+                        labels = c("no", "yes")),
+         slope = factor(slope,
+                          levels = c(1, 2, 3),
+                          labels = c("downsloping", "flat", "upsloping")),
+         thal = factor(thal,
+                       levels = c(1, 2, 3),
+                       labels = c("fixed", "normal", "reversable")),
+         target = factor(target,
+                         levels = c(0, 1),
+                         labels = c("yes", "no"))
+         
+         )
+str(heart_disease)
+
+
+#######################################################################
+# PLOTS 
+######################################################################
+
+# Plot 1: Distribution of heart disease by sex 
+
+heart_disease %>% 
+  ggplot(aes(x = sex,            
+             fill = target)) +   
+  geom_bar(position = "dodge") + 
+  geom_text(stat = "count", 
+            aes(label = after_stat(count), # show bar counts as labels
+                color = target),           # color labels by target to match the fill colour
+            position = position_dodge(width = 0.8), # align labels with bars
+            vjust = -0.28,  # nudge labels above bars
+            size = 3.2) +  # set label font size
+  scale_fill_brewer(palette = "Set1") + # apply fill palette 
+  scale_color_brewer(palette = "Set1", guide = "none") + # match label colors to fill colour
+  labs(title = "Distribution of heart disease by sex", 
+       x = "",        
+       y = "Count",     
+       caption = "n = 303", 
+       fill = "Heart disease") + 
+  ggthemes::theme_clean() 
+ 
+
+# Plot 2: Excercise induced angina by sex
+heart_disease %>% 
+  filter(exang == "yes") %>%
+  ggplot(aes(x = sex,
+             fill = sex)) +
+  geom_bar(position = "dodge") + 
+  geom_text(stat = "count",
+            aes(label = after_stat(count)),
+            vjust = 1.5,          # place inside the bar
+            color = "white",      # white text for contrast
+            fontface = "bold",    # bold text
+            size = 4) +           # font size
+  scale_fill_brewer(palette = "Set1") + 
+  labs(title = "Excercise induced angina by sex", 
+       x = "",        
+       y = "Count",     
+       caption = "n = 99", ) + 
+  ggthemes::theme_clean() +
+    theme(legend.position = "none") # removing the legend as it is not necessary
+
+
+  
+```
