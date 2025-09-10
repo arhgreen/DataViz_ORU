@@ -149,7 +149,7 @@ heart_disease_completed %>%
   geom_smooth(method = "lm", se = TRUE, color = "red") +  # Adding regression line with confidence interval
   labs(
     title = "Max heart rate Vs Cholesterol",
-    x = " Max heart rate (bpm)",
+    x = " Max heart rate (pm)",
     y = "Cholesterol (mg/dl)"
   ) +
   theme_minimal()
@@ -172,4 +172,174 @@ heart_disease_completed %>%
     y = "Frequency"
   ) +
   theme_minimal()
-# From the histogram, the age distribution of patients is right-skewed, with a higher   
+# From the histogram, the age distribution of patients is right-skewed, with a higher 
+
+
+
+
+#############################################################################
+
+# ANALYSING MISSINGNESS
+#############################################################################
+
+# defining parameters to be used later 
+x_
+40 -> x_adj # divide x-variable by this factor in mar and mnar mechanism
+20 -> y_adj # divide y-variable by this factor in mnar mechanism
+
+-0.044 -> mar_adj # adjustment to get same proportion missing as MCAR mechanism
+0.109 -> mnar_adj # adjustment to get same proportion missing as MCAR mechanism 
+
+.7 -> resp_prop # approximate proportion of non-missing data in y-variable
+
+100 -> m # number of imputed datasets (at least 5, more improves approximation but takes more time)
+
+2022 -> seed # random number seed to allow replication, should just be any number
+###################################################################
+
+#Load libraries that are needed and set random number seed
+###################################################################
+library(mice)
+library(miceadds)
+library(DescTools)
+library(confintr)
+library(ggplot2)
+set.seed(seed)
+
+#First we create missing data using a MCAR mechanism,and then plot the data
+heart_mcar <- heart_disease_completed
+mcar <- runif(nrow(heart_disease_completed)) > resp_prop # Which observations should be missing?
+heart_mcar[mcar,y_var] <- NA # Remove those that should be missing
+par(mfrow=c(2,2))
+boxplot(heart_disease_completed[,c(x_var,y_var)])
+plot(heart_disease_completed[,x_var],heart_disease_completed[,y_var],col=2+2*mcar,pch=16,cex=.7)
+boxplot(heart_disease_completed[,x_var] ~ mcar,col=c(2,4), main=paste(x_var))
+boxplot(heart_disease_completed[,y_var] ~ mcar,col=c(2,4), main=paste(y_var))
+
+#Then we do the same but with a MAR mechanism. Notice the difference!
+heart_mar <- heart_disease_completed
+mar <- (heart_disease_completed[,x_var]/x_adj + runif(nrow(heart_disease_completed))) > 
+  (resp_prop + mean(heart_disease_completed[,x_var])/x_adj + mar_adj)
+heart_mar[mar,y_var] <- NA
+par(mfrow=c(2,2))
+boxplot(heart_disease_completed[,c(x_var,y_var)])
+plot(heart_disease_completed[,x_var],heart_disease_completed[,y_var],col=2+2*mar,pch=16,cex=.7)
+boxplot(heart_disease_completed[,x_var] ~ mar,col=c(2,4), main=paste(x_var))
+boxplot(heart_disease_completed[,y_var] ~ mar,col=c(2,4), main=paste(y_var))
+
+#Finally we use MNAR mechanism:
+heart_mnar <- heart_disease_completed
+mnar <- (heart_disease_completed[,y_var]/y_adj - heart_disease_completed[,x_var]/x_adj + runif(nrow(heart_disease_completed))) > 
+  (resp_prop + mean(heart_disease_completed[,y_var]/y_adj) - mean(heart_disease_completed[,x_var]/x_adj) + mnar_adj)
+heart_mnar[mnar,y_var] <- NA
+par(mfrow=c(2,2))
+boxplot(heart_disease_completed[,c(x_var,y_var)])
+plot(heart_disease_completed[,x_var],heart_disease_completed[,y_var],col=2+2*mnar,pch=16,cex=.7)
+boxplot(heart_disease_completed[,x_var] ~ mnar,col=c(2,4), main=paste(x_var))
+boxplot(heart_disease_completed[,y_var] ~ mnar,col=c(2,4), main=paste(y_var))
+
+#How many in y_var are missing?
+miss <- c(
+  sum(is.na(heart_disease_completed[,y_var]))
+  ,sum(is.na(heart_mcar[,y_var]))
+  ,sum(is.na(heart_mar[,y_var]))
+  ,sum(is.na(heart_mnar[,y_var]))
+)#
+names(miss) <- c("Complete","MCAR","MAR","MNAR")
+miss
+
+#Plot miss as bargraph
+par(mfrow=c(1,1))
+barplot(miss, ylim=c(0,nrow(heart_disease_completed)),col=1:4, main="Number off missing values by mechanism",
+        sub="Adjust x_adj, y_adj, mar_adj and mnar_adj to become (about) the same.")
+legend("topleft",legend=miss, fill=1:4)
+
+#Now go back and change x_adj, y_adj, mar_adj and mnar_adj until you get 
+# (about) the same rate of missing values. When ready, continue with:
+
+#What is the mean of y_var among observed?
+mean_y_var <- c(
+  mean(heart_disease_completed[,y_var])
+  ,mean(heart_mcar[,y_var],na.rm=T)
+  ,mean(heart_mar[,y_var],na.rm=T)
+  ,mean(heart_mnar[,y_var],na.rm=T)
+)#
+names(mean_y_var) <- c("Complete","MCAR","MAR","MNAR")
+mean_y_var
+
+#Plot mean estimates as points (dot plot) using ggplot
+ggplot(data.frame(y=mean_y_var, x=names(mean_y_var)), aes(x = x, y = y)) +
+  geom_point()
+
+#or using base R
+par(mfrow=c(1,1))
+plot(mean_y_var, col=1:4, main="Mean of y estimates", pch=16, 
+     ylim=summary(mean_y_var)[c(1,5)]*c(.98,1.02))
+legend("bottom",names(mean_y_var), col=1:4, pch=16, ncol=4)
+
+
+#What is the correlation between y_var and x_var among observed?
+cors_xy_var <- c(
+  cor(heart_disease_completed[,y_var], heart_disease_completed[,x_var])
+  ,cor(heart_mcar[,y_var], heart_disease_completed[,x_var], use="pairwise.complete.obs")
+  ,cor(heart_mar[,y_var], heart_disease_completed[,x_var], use="pairwise.complete.obs")
+  ,cor(heart_mnar[,y_var],heart_disease_completed[,x_var], use="pairwise.complete.obs")
+)#
+names(cors_xy_var) <- c("Complete","MCAR","MAR","MNAR")
+cors_xy_var
+
+
+#Plot mean estimates as points (dot plot) using ggplot
+ggplot(data.frame(y=cors_xy_var, x=1:4), aes(x = x, y = y)) +
+  geom_line() +
+  theme_minimal()
+
+#or base R
+par(mfrow=c(1,1))
+plot(1:4, cors_xy_var, main="Correlations of x and y estimates", type="l")
+
+#What does regression of y_var on x_var look like?
+regr_yx <- list(
+  complete = summary(lm(data=heart_disease_completed, as.formula(paste0(y_var, "~", x_var))))$coeff[,1]
+  ,mcar = summary(lm(data=heart_mcar, as.formula(paste0(y_var, "~", x_var))))$coeff
+  ,mar = summary(lm(data=heart_mar, as.formula(paste0(y_var, "~", x_var))))$coeff
+  ,mnar = summary(lm(data=heart_mnar, as.formula(paste0(y_var, "~", x_var))))$coeff
+)#
+regr_yx
+
+#Show with ggplot2
+ggplot(data.frame(x=heart_disease_completed[,x_var],y=heart_disease_completed[,y_var]), aes(x=x, y=y)) +
+  geom_point() + 
+  geom_abline(intercept = regr_yx$complete[1], slope = regr_yx$complete[2]) +
+  geom_abline(intercept = regr_yx$mcar[1], slope = regr_yx$mcar[2], colour = 2) +
+  geom_abline(intercept = regr_yx$mar[1], slope = regr_yx$mar[2], colour = 3) +
+  geom_abline(intercept = regr_yx$mnar[1], slope = regr_yx$mnar[2], colour = 4) +
+  theme_minimal()
+
+#or with base R
+par(mfrow=c(1,1),bg="white")
+plot(heart[,c(x_var,y_var)], pch=16)
+grid()
+abline(a = regr_yx$complete[1], b = regr_yx$complete[2])
+abline(a = regr_yx$mcar[1], b = regr_yx$mcar[2], col=2)
+abline(a = regr_yx$mar[1], b = regr_yx$mar[2], col=3)
+abline(a = regr_yx$mnar[1], b = regr_yx$mnar[2], col=4)
+
+#impute missing data (each mechanism) m times (how long it takes depends on m)
+imp_mcar <- mice(heart_mcar[,c(x_var,y_var)], seed = 1, m = m, print = FALSE)
+imp_mar <- mice(heart_mar[,c(x_var,y_var)], seed = 1, m = m, print = FALSE)
+imp_mnar <- mice(heart_mnar[,c(x_var,y_var)], seed = 1, m = m, print = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
