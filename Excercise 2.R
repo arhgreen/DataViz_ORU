@@ -6,12 +6,23 @@
 
 ## Installing necessary packages 
 install.packages("ggplot2")  # For Data visualisation
-install.packages("tidyverse") # For data Manipulation
+install.packages("tidyverse") # For data Manipulationinstall.packages("miceadds")
+install.packages("DescTools")
+install.packages("confintr")
+install.packages("mice")
+install.packages("broom") # For tidying model outputs
+install.packages("viridis") # For color palettes
 
 
 ## Loading necessary packages
 library(ggplot2)
 library(tidyverse)
+library(miceadds)
+library(DescTools)
+library(confintr)
+library(mice)
+library(broom)
+libary(viridis)
 
 
 # Fetching the Heart disease data from the given link 
@@ -91,6 +102,16 @@ heart_disease <- heart_disease %>%
 #######################################################################
 # EXCERCISE 2
 #######################################################################
+# Defining parameters 
+x_var <- "maxhr" # Max Herat rate
+y_var <- "chol" # Cholesterol
+x_adj <- 100 # adjustment factor for x variable in MAR and MNAR mechanisms
+y_adj <- 90 # adjustment factor for y variable in MNAR mechanism
+mar_adj <- 0.1 # adjustment to approximate same mmissingness in MCAR
+mnar_adj <- 0.15 # adjustment to approximate same mmissingness in MCAR
+resp_prop <- 0.7 # proportion of non-missing data in y variable
+m <- 150 # number of imputed datasets
+seed <- 1234 # random number seed to allow replication
 
 # Exploring summary statistics of the continuous variables in the dataset
 summary(heart_disease)
@@ -110,9 +131,9 @@ spec_method["ca"] <- "polr" # ordinal categorical (0–3)
 # Performing the imputation  
 imputed_data <- mice::mice(heart_disease, 
                            method = spec_method, # specifying the methods
-                           m = 6, # 6 imputed datasets
+                           m = m, # 6 imputed datasets
                            maxit = 1, # one iteration is enough given few missing values
-                           seed = 1234) # setting seed for reproducibility
+                           seed = seed) # setting seed for reproducibility
 # Checking the imputed values
 imputed_data$imp
 
@@ -124,24 +145,11 @@ sum(is.na(heart_disease_completed)) # checking for any remaining missing values
 
 # Exploring the structure of the completed dataset  
 str(heart_disease_completed)
+
 # Exploring summary statistics of the completed dataset
 summary(heart_disease_completed)  # Missing values have been successfully imputed
 
 ###SCATTERPLOT
-heart_disease_completed %>% 
-  ggplot(aes(x = maxhr, y = chol)) +
-  geom_point(color = "cornflowerblue", alpha = 0.6) + # scatter points
-  labs(
-    title = "Scatterplot of Max heart rate vs Cholesterol",
-    x = "Max heart rate (bpm)",
-    y = "Cholesterol (mg/dl)"
-  ) +
-  theme_minimal()
-# From the scatterplot, there seems to be a weak positive correlation between 
-# age and cholesterol levels i.e. the older people get, the higher their 
-# cholesterol levels tend to get.
-
-# CHANGES TO THE PLOT
 heart_disease_completed %>% 
   ggplot(aes(x = maxhr, # x_var
              y = chol )) + # y_var 
@@ -153,92 +161,42 @@ heart_disease_completed %>%
     y = "Cholesterol (mg/dl)"
   ) +
   theme_minimal()
-# Adding a regression line with confidence interval to better illustrate the correlation.
-# The weak positive correlation between age and cholesterol levels is further confirmed
+
+# the scatter plot shows a very weak negative linear relationship between max heart rate and cholesterol levels
 
 # Setting a figure on the Correlation
 cor(heart_disease_completed[, c("maxhr", 
                                 "chol")])
 
-# The correlation coefficient is ≈-0.0034, which indicates an extremely weak negative correlation
-
-# HISTOGRAM
-heart_disease_completed %>% 
-  ggplot(aes(x = age)) +
-  geom_histogram(binwidth = 5, fill = "lightgreen", color = "black", alpha = 0.7) +
-  labs(
-    title = "Histogram of Age",
-    x = "Age (years)",
-    y = "Frequency"
-  ) +
-  theme_minimal()
-# From the histogram, the age distribution of patients is right-skewed, with a higher 
+# The correlation coefficient is ≈-0.0034 i.e. very close to zero, which indicates an extremely weak negative correlation
 
 
-
-
+###############################################################################
+# CREATING MISSING VALUES
 #############################################################################
 
-# ANALYSING MISSINGNESS
-#############################################################################
-
-# defining parameters to be used later 
-x_
-40 -> x_adj # divide x-variable by this factor in mar and mnar mechanism
-20 -> y_adj # divide y-variable by this factor in mnar mechanism
-
--0.044 -> mar_adj # adjustment to get same proportion missing as MCAR mechanism
-0.109 -> mnar_adj # adjustment to get same proportion missing as MCAR mechanism 
-
-.7 -> resp_prop # approximate proportion of non-missing data in y-variable
-
-100 -> m # number of imputed datasets (at least 5, more improves approximation but takes more time)
-
-2022 -> seed # random number seed to allow replication, should just be any number
-###################################################################
-
-#Load libraries that are needed and set random number seed
-###################################################################
-library(mice)
-library(miceadds)
-library(DescTools)
-library(confintr)
-library(ggplot2)
 set.seed(seed)
 
-#First we create missing data using a MCAR mechanism,and then plot the data
 heart_mcar <- heart_disease_completed
-mcar <- runif(nrow(heart_disease_completed)) > resp_prop # Which observations should be missing?
-heart_mcar[mcar,y_var] <- NA # Remove those that should be missing
-par(mfrow=c(2,2))
-boxplot(heart_disease_completed[,c(x_var,y_var)])
-plot(heart_disease_completed[,x_var],heart_disease_completed[,y_var],col=2+2*mcar,pch=16,cex=.7)
-boxplot(heart_disease_completed[,x_var] ~ mcar,col=c(2,4), main=paste(x_var))
-boxplot(heart_disease_completed[,y_var] ~ mcar,col=c(2,4), main=paste(y_var))
+mcar <- runif(nrow(heart_disease_completed)) > resp_prop
+heart_mcar[mcar,y_var] <- NA
 
-#Then we do the same but with a MAR mechanism. Notice the difference!
+#With MAR Mechanism
 heart_mar <- heart_disease_completed
 mar <- (heart_disease_completed[,x_var]/x_adj + runif(nrow(heart_disease_completed))) > 
   (resp_prop + mean(heart_disease_completed[,x_var])/x_adj + mar_adj)
 heart_mar[mar,y_var] <- NA
-par(mfrow=c(2,2))
-boxplot(heart_disease_completed[,c(x_var,y_var)])
-plot(heart_disease_completed[,x_var],heart_disease_completed[,y_var],col=2+2*mar,pch=16,cex=.7)
-boxplot(heart_disease_completed[,x_var] ~ mar,col=c(2,4), main=paste(x_var))
-boxplot(heart_disease_completed[,y_var] ~ mar,col=c(2,4), main=paste(y_var))
 
-#Finally we use MNAR mechanism:
+### MNAR MECHANISM
 heart_mnar <- heart_disease_completed
+
 mnar <- (heart_disease_completed[,y_var]/y_adj - heart_disease_completed[,x_var]/x_adj + runif(nrow(heart_disease_completed))) > 
   (resp_prop + mean(heart_disease_completed[,y_var]/y_adj) - mean(heart_disease_completed[,x_var]/x_adj) + mnar_adj)
-heart_mnar[mnar,y_var] <- NA
-par(mfrow=c(2,2))
-boxplot(heart_disease_completed[,c(x_var,y_var)])
-plot(heart_disease_completed[,x_var],heart_disease_completed[,y_var],col=2+2*mnar,pch=16,cex=.7)
-boxplot(heart_disease_completed[,x_var] ~ mnar,col=c(2,4), main=paste(x_var))
-boxplot(heart_disease_completed[,y_var] ~ mnar,col=c(2,4), main=paste(y_var))
 
-#How many in y_var are missing?
+heart_mnar[mnar,y_var] <- NA
+
+
+#MISSINGNESS IN y_var
 miss <- c(
   sum(is.na(heart_disease_completed[,y_var]))
   ,sum(is.na(heart_mcar[,y_var]))
@@ -248,14 +206,14 @@ miss <- c(
 names(miss) <- c("Complete","MCAR","MAR","MNAR")
 miss
 
-#Plot miss as bargraph
+
+#Bar plot visualising missing values
 par(mfrow=c(1,1))
-barplot(miss, ylim=c(0,nrow(heart_disease_completed)),col=1:4, main="Number off missing values by mechanism",
-        sub="Adjust x_adj, y_adj, mar_adj and mnar_adj to become (about) the same.")
+
+barplot(miss, ylim=c(0,nrow(heart_disease_completed)),col=1:4, 
+        main="Number off missing values by mechanism")
 legend("topleft",legend=miss, fill=1:4)
 
-#Now go back and change x_adj, y_adj, mar_adj and mnar_adj until you get 
-# (about) the same rate of missing values. When ready, continue with:
 
 #What is the mean of y_var among observed?
 mean_y_var <- c(
@@ -268,37 +226,27 @@ names(mean_y_var) <- c("Complete","MCAR","MAR","MNAR")
 mean_y_var
 
 #Plot mean estimates as points (dot plot) using ggplot
-ggplot(data.frame(y=mean_y_var, x=names(mean_y_var)), aes(x = x, y = y)) +
-  geom_point()
-
-#or using base R
-par(mfrow=c(1,1))
-plot(mean_y_var, col=1:4, main="Mean of y estimates", pch=16, 
-     ylim=summary(mean_y_var)[c(1,5)]*c(.98,1.02))
-legend("bottom",names(mean_y_var), col=1:4, pch=16, ncol=4)
-
-
-#What is the correlation between y_var and x_var among observed?
-cors_xy_var <- c(
-  cor(heart_disease_completed[,y_var], heart_disease_completed[,x_var])
-  ,cor(heart_mcar[,y_var], heart_disease_completed[,x_var], use="pairwise.complete.obs")
-  ,cor(heart_mar[,y_var], heart_disease_completed[,x_var], use="pairwise.complete.obs")
-  ,cor(heart_mnar[,y_var],heart_disease_completed[,x_var], use="pairwise.complete.obs")
-)#
-names(cors_xy_var) <- c("Complete","MCAR","MAR","MNAR")
-cors_xy_var
-
-
-#Plot mean estimates as points (dot plot) using ggplot
-ggplot(data.frame(y=cors_xy_var, x=1:4), aes(x = x, y = y)) +
-  geom_line() +
+ggplot(data.frame(y=mean_y_var, 
+                  x=names(mean_y_var)), 
+       aes(x = x,
+           y = y)) +
+  geom_point(size=3,
+             colour = "cornflowerblue") +
+  labs(x = "",
+       y = "Mean of y estimates",
+       title = "Mean of y estimates by MAR, MCAR and MNAR") +
   theme_minimal()
 
-#or base R
-par(mfrow=c(1,1))
-plot(1:4, cors_xy_var, main="Correlations of x and y estimates", type="l")
+# The plot above shows a relatively stable mean cholesterol levels in the missing
+# data mechanisms as compared to the complete data suggesting that the mechanisms 
+# have not significantly biased the mean estimate of cholesterol in this case.
+# Also, i have made changes to the plot in terms of aesthetics to make it more visually appealing
+# as well as axis labels and title for better understanding of the plot.
 
-#What does regression of y_var on x_var look like?
+
+#REGRESSION of y_var on x_var 
+
+#####################################ORIGINAL CODE #####################################
 regr_yx <- list(
   complete = summary(lm(data=heart_disease_completed, as.formula(paste0(y_var, "~", x_var))))$coeff[,1]
   ,mcar = summary(lm(data=heart_mcar, as.formula(paste0(y_var, "~", x_var))))$coeff
@@ -315,22 +263,101 @@ ggplot(data.frame(x=heart_disease_completed[,x_var],y=heart_disease_completed[,y
   geom_abline(intercept = regr_yx$mar[1], slope = regr_yx$mar[2], colour = 3) +
   geom_abline(intercept = regr_yx$mnar[1], slope = regr_yx$mnar[2], colour = 4) +
   theme_minimal()
+##########################################################################################
 
-#or with base R
-par(mfrow=c(1,1),bg="white")
-plot(heart[,c(x_var,y_var)], pch=16)
-grid()
-abline(a = regr_yx$complete[1], b = regr_yx$complete[2])
-abline(a = regr_yx$mcar[1], b = regr_yx$mcar[2], col=2)
-abline(a = regr_yx$mar[1], b = regr_yx$mar[2], col=3)
-abline(a = regr_yx$mnar[1], b = regr_yx$mnar[2], col=4)
+############################REVISED CODE & VIZ #####################################
 
-#impute missing data (each mechanism) m times (how long it takes depends on m)
-imp_mcar <- mice(heart_mcar[,c(x_var,y_var)], seed = 1, m = m, print = FALSE)
-imp_mar <- mice(heart_mar[,c(x_var,y_var)], seed = 1, m = m, print = FALSE)
-imp_mnar <- mice(heart_mnar[,c(x_var,y_var)], seed = 1, m = m, print = FALSE)
+# Regression of y_var on x_var across different datasets
+models <- list(complete = lm(as.formula(paste0(y_var, "~", x_var)), data = heart_disease_completed),
+              mcar = lm(as.formula(paste0(y_var, "~", x_var)), data = heart_mcar),
+              mar = lm(as.formula(paste0(y_var, "~", x_var)), data = heart_mar),
+               mnar = lm(as.formula(paste0(y_var, "~", x_var)), data = heart_mnar)
+)
 
+# Extracting coefficients into a tidy dataframe
+regr_df <- do.call(rbind, 
+                   lapply(names(models),
+                          function(name) {
+  coef <- coef(models[[name]])
+  data.frame(
+    dataset = name,
+    intercept = coef[1],
+    slope = coef[2]
+  )
+}))
 
+# ggplot visualisation using viridis color palette
+ggplot(heart_disease_completed,
+       aes_string(x = x_var,
+                  y = y_var)) +
+  geom_point(alpha = 0.8, color = "cornflowerblue") +
+  geom_abline(data = regr_df,
+              aes(intercept = intercept, 
+                  slope = slope, 
+                  color = dataset),
+              size = 1.2) +
+  scale_color_viridis_d(option = "A", 
+                               begin = 0.1, 
+                               end = 0.9) +
+  labs( title = " Regression of Cholesterol on Max heart rate",
+    x = "Max heart rate (pm)",
+    y = "Cholesterol (mg/dl)",
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top",
+    plot.title = element_text(face = "bold")
+  )
+
+##########################################################################################
+
+# The revised code and visualization improves upon the original by:
+# 1. Using a consistent color palette (viridis) for better aesthetics and accessibility.
+# 2. Adding titles and axis labels for clarity.
+# 3. Using a legend to identify regression lines from different datasets.
+# 4. Enhancing point visibility with adjusted alpha and color.
+
+#################CORRELATION##########################################
+# Comparing the Correlation of y_var with x_var across different datasets
+
+df <- list(complete = heart_disease_completed,
+           mcar = heart_mcar,
+           mar  = heart_mar,
+           mnar = heart_mnar
+)
+
+# Compute correlations and store in a dataframe
+cor_df <- do.call(rbind, 
+                  lapply(names(df),
+                         function(name) {
+  data <- df[[name]]
+  cor_val <- cor(data[[x_var]], data[[y_var]], use = "complete.obs")
+  data.frame(dataset = name, correlation = cor_val)
+}))
+
+cor_df
+
+# Visualising correlations using ggplot2 with viridis color palette
+ggplot(cor_df, 
+       aes(x = dataset, 
+           y = correlation, 
+           fill = dataset)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = round(correlation, 2)), 
+            vjust = -0.5, 
+            size = 5) +
+  scale_fill_viridis_d(option = "D", 
+                       begin = 0.1, end = 0.9, 
+                       name = "Dataset") +
+  labs( title = "Correlation between Cholesterol and Max heart rate",
+    x = "",
+    y = "Correlation coefficient"
+  ) +
+  ylim(-1, 1) +  # Since correlations always lie on [-1,1]
+  theme_minimal() +
+  theme(legend.position = "none",
+    plot.title = element_text(face = "bold")
+  )
+##########################################################################################
 
 
 
