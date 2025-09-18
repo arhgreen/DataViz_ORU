@@ -14,7 +14,9 @@ library(data.table)
 setwd("~/Documents/DataViz_ORU")
 
 ## Loading data
-ds_survey <- fread("multipleChoiceResponses.csv", skip = 1) 
+ds_survey <- fread("multipleChoiceResponses.csv", 
+                   skip = 1,
+                   na.strings = c("", "NA")) # treating "" as NA for consistency
 
 # reviewing variable names before filtering out the needed ones
 colnames(ds_survey)
@@ -24,7 +26,7 @@ dss <- ds_survey[, c(1, 2, 4, 5, 6, 7, 8, 10, 12, 13, 14, 23)]
 
 # MISSING VALUES
 # Checking for missing values
-sum(is.na(dss)) # 0 missing values from the filtered columns
+sum(is.na(dss)) # 18 749 missing values from the filtered columns
 
 # Renaming the variables
 dss <- dss %>% 
@@ -46,6 +48,24 @@ dss <- dss %>%
 colnames(dss)        
 
 # VARIABLE TRANSFORMATION AND CLEANING
+
+# Age
+dss <- dss %>% 
+  mutate(age = factor(age,
+                      levels = c("18-21",
+                                 "22-24",
+                                 "25-29",
+                                 "35-39",
+                                 "40-44",
+                                 "45-49",
+                                 "50-54",
+                                 "55-59",
+                                 "60-69",
+                                 "70-79",
+                                 "80+"),
+                      ordered = TRUE))
+table(dss$age, 
+      useNA = "always") # 3 776 Missing values
 
 # Country
 dss <- dss %>%
@@ -82,6 +102,8 @@ dss <- dss %>%
 
 table(dss$education,useNA="always") # 766 missing values 
 
+# Handling Missing values in education 
+
 
 
 
@@ -97,11 +119,12 @@ dss <- dss %>%
                             `Information technology, networking, or system administration` = "Information technology",
                             `Medical or life sciences (biology, chemistry, medicine, etc.)` = "Medical or life sciences",
                             `Social sciences (anthropology, psychology, sociology, etc.)` = "Social sciences",
-                            'I never declared a major' = "Undeclared")) %>% 
+                            'I never declared a major' = "Undeclared",
+                            `""` = NA_character_)) %>% 
   mutate(undergrad = factor(undergrad,
                             ordered = FALSE))
 
-table(dss$undergrad,useNA="always") # 0 missing values
+table(dss$undergrad,useNA="always") # 912 missing values
 
 
 # Industry
@@ -117,9 +140,11 @@ dss <- dss %>%
   mutate(industry = factor(industry,
                             ordered = FALSE))
 
-table(dss$industry,useNA="always") # 0 missing values
+table(dss$industry,useNA="always") # 2 174 missing values
 
 # Job title
 dss <- dss %>% 
   mutate(title = factor(title, 
                         ordered = FALSE))
+
+table(dss$title,useNA="always") # 959 missing values
