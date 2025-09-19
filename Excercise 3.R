@@ -111,6 +111,29 @@ dss <- dss %>%
 
 table(dss$country,useNA="always") # 0 missing values
 
+########## Visualising country of residence of the respondents ##################
+# Top 10 countries by number of respondents
+top_countries <- dss %>%
+  group_by(country) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  slice_head(n = 10)
+
+# Plotting the top 10 countries
+ggplot(data = top_countries, 
+       aes(x = reorder(country, count),
+           y = count)) +
+  geom_bar(stat = "identity", fill = "cornflowerblue") +
+  labs(title = "Top 10 Countries by number of respondents",
+       x = "",
+       y = "Number of respondents",
+       caption = "NA = 0") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"),
+        plot.caption = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  coord_flip()
+
 # Education and ordering the levels appropriately 
 dss <- dss %>%
   mutate(education = recode(education,
