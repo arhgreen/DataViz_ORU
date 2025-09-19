@@ -128,11 +128,69 @@ ggplot(data = top_countries,
        x = "",
        y = "Number of respondents",
        caption = "NA = 0") +
+  geom_text(aes(label = count), 
+            hjust = 1.5,
+            colour = "white") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"),
         plot.caption = element_text(face = "bold"),
         axis.text.y = element_text(face = "bold")) +
   coord_flip()
+
+
+#########################DURATION################################################
+# Distribution of survey completion duration
+
+# creating variable called duration(in minutes)
+dss <- dss %>% 
+  mutate(duration_hours = duration / 3600)
+  
+  
+  
+  
+ggplot(data = dss, 
+       aes(x = duration)) +
+  geom_histogram(
+                 fill = "cornflowerblue", 
+                 color = "black") +
+  labs(title = "Distribution of survey completion duration",
+       x = "Duration (in seconds)",
+       y = "Count",
+       caption = "NA = 0") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"),
+        plot.caption = element_text(face = "bold"))
+
+
+
+
+
+
+
+
+# Mean response time by sex
+dss %>% 
+  ggplot(aes(
+    x = gender,
+    y = duration_hours,
+    colour = gender)) +
+  geom_boxplot() +
+  labs(
+    title = "Distribution of survey duration by gender",
+    x = "Gender",
+    y = "Duration (seconds)"
+  ) +
+  theme_minimal() 
+
+
+
+
+
+
+
+
+###############################################################################
+
 
 # Education and ordering the levels appropriately 
 dss <- dss %>%
