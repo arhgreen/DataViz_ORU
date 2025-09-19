@@ -81,11 +81,17 @@ ggplot(data = dss,
   theme(plot.title = element_text(face = "bold"),
         plot.caption = element_text(face = "bold"))
 
-# The distribution of respondents is concentrated in the 22–24, 25–29, and 
-# 30–34 age groups, which collectively represent the largest proportion of 
-# the data In contrast, individuals aged 40–44 through 80+ are 
-# comparatively underrepresented. Additionally, a substantial number of 
-# responses are missing for the age variable (n = 3,776).
+# This plot clarifies the distribution of respondents across age groups. 
+# It shows that the majority of participants are between 22–24, 25–29, and 
+# 30–34 years of age, indicating that majority of the respondents were
+# younger individuals. In contrast, respondents aged 40–44 and older are 
+# comparatively underrepresented. Examining the age distribution is important 
+# because it highlights potential biases in the dataset, suggesting that 
+# younger age groups may be overrepresented relative to older ones. Moreover, 
+# the presence of a large number of missing responses (n = 3,776) underscores 
+# the need for caution when interpreting the demographic profile. Alternatively, 
+# the missing values could be handled through imputation methods, depending on
+# the analysis goals and assumptions about the missing data mechanism.
 ################################################################################
 
 # Handling Missing variables in age
