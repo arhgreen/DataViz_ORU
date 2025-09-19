@@ -28,6 +28,7 @@ dss <- ds_survey[, c(1, 2, 4, 5, 6, 7, 8, 10, 12, 13, 14, 23)]
 # Checking for missing values
 sum(is.na(dss)) # 18 749 missing values from the filtered columns
 
+
 # Renaming the variables
 dss <- dss %>% 
  rename(duration = "Duration (in seconds)",
@@ -55,6 +56,7 @@ dss <- dss %>%
                       levels = c("18-21",
                                  "22-24",
                                  "25-29",
+                                 "30-34",
                                  "35-39",
                                  "40-44",
                                  "45-49",
@@ -66,6 +68,28 @@ dss <- dss %>%
                       ordered = TRUE))
 table(dss$age, 
       useNA = "always") # 3 776 Missing values
+
+################# Visualizing age distribution ################################
+ggplot(data = dss, 
+       aes(x = age)) +
+  geom_bar(fill = "cornflowerblue") +
+  labs(title = "Age distribution of the respondents",
+       x = "Age groups",
+       y = "Count",
+       caption = "NA = 3 776") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"),
+        plot.caption = element_text(face = "bold"))
+
+# The distribution of respondents is concentrated in the 22–24, 25–29, and 
+# 30–34 age groups, which collectively represent the largest proportion of 
+# the data In contrast, individuals aged 40–44 through 80+ are 
+# comparatively underrepresented. Additionally, a substantial number of 
+# responses are missing for the age variable (n = 3,776).
+################################################################################
+
+# Handling Missing variables in age
+
 
 # Country
 dss <- dss %>%
@@ -101,6 +125,10 @@ dss <- dss %>%
                             ordered = TRUE))
 
 table(dss$education,useNA="always") # 766 missing values 
+
+# Showing rows with missing education values
+# Show only rows with any NA
+tail(as.tibble(dss[!complete.cases(dss), ]))
 
 # Handling Missing values in education 
 
@@ -148,3 +176,7 @@ dss <- dss %>%
                         ordered = FALSE))
 
 table(dss$title,useNA="always") # 959 missing values
+
+# Yearly wage
+dss <- dss %>% 
+  mutate(yearly_wage = factor)
